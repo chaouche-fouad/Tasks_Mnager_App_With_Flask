@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TODO List</title>
+
+    {{ bootstrap.load_css() }}
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.standalone.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+    <div class="container m-5 p-2 rounded mx-auto bg-light shadow">
+
+        <!-- Title -->
+        <div class="row m-1 p-4">
+            <div class="col text-center">
+                <div class="h1 text-primary">
+                    <i class="fa fa-check bg-primary text-white rounded p-2"></i>
+                    <span>TASKS LIST</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Task -->
+        <div class="row m-1 p-3">
+            <form method="POST" action="/">
+                <input type="hidden" name="action" value="add" />
+                <div class="col col-11 mx-auto">
+                    <div
+                        class="row bg-white rounded shadow-sm p-2 add-todo-wrapper align-items-center justify-content-center">
+                        <div class="col">
+                            <input name="task" type="text"
+                                class="form-control form-control-lg border-0 add-todo-input bg-transparent rounded"
+                                placeholder="Add new .." required />
+                        </div>
+                        <div class="col-auto m-0 px-2 d-flex align-items-center">
+                            <input type="hidden" name="due_date" id="dueDateHidden" />
+                            <label class="text-secondary my-2 px-1 view-opt-label due-date-label d-none d-md-block">Not
+                                set</label>
+                            <i class="fa fa-calendar my-2 px-1 text-primary btn due-date-button"
+                                title="Set Due date"></i>
+                            <i class="fa fa-calendar-times-o my-2 px-1 text-danger btn clear-due-date-button d-none"
+                                title="Clear Due date" id="clearDueDate"></i>
+                        </div>
+                        <div class="col-auto px-0 mx-0 mr-2">
+                            <button type="submit" class="btn btn-primary">Add</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="p-2 mx-4 border-black-25 border-bottom"></div>
+
+        <!-- Filters & Sort -->
+        <div class="row m-1 p-3 px-5 justify-content-center rounded mx-auto bg-light shadow">
+            <div class="col-auto">
+                <form method="GET" action="/" id="filter-sort-form" class="form-inline d-flex">
+                    <div class="col-auto d-flex align-items-center">
+                        <label class="text-secondary pr-2">Filter</label>
+                        <select name="task_filter" class="custom-select custom-select-sm btn mx-1"
+                            onchange="document.getElementById('filter-sort-form').submit();">
+                            <option value="all" {% if request.args.get('task_filter')=='all' or not
+                                request.args.get('task_filter') %}selected{% endif %}>All</option>
+                            <option value="completed" {% if request.args.get('task_filter')=='completed' %}selected{%
+                                endif %}>Completed</option>
+                            <option value="active" {% if request.args.get('task_filter')=='active' %}selected{% endif
+                                %}>Active</option>
+                            <option value="has-due-date" {% if request.args.get('task_filter')=='has-due-date'
+                                %}selected{% endif %}>Has due date</option>
+                        </select>
+                    </div>
+                    <div class="col-auto d-flex align-items-center">
+                        <label class="text-secondary pr-2">Sort</label>
+                        <select name="task_sort" class="custom-select custom-select-sm btn"
+                            onchange="document.getElementById('filter-sort-form').submit();">
+                            <option value="added-date-asc" {% if request.args.get('task_sort')=='added-date-asc' or not
+                                request.args.get('task_sort') %}selected{% endif %}>Added date</option>
+                            <option value="due-date-desc" {% if request.args.get('task_sort')=='due-date-desc'
+                                %}selected{% endif %}>Due date</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Task List -->
+        <div class="row mx-1 px-5 pb-3 w-80">
+            <div class="col mx-auto">
+                {% for task in tasks %}
+                <form method="POST" class="row px-3 align-items-center todo-item rounded mb-2 bg-white shadow-sm">
+                    <input type="hidden" name="task_id" value="{{ task.id }}" />
+
+                    <!-- Complete Toggle -->
+                    <div class="col-auto m-1 p-0 d-flex align-items-center">
+                        <h2 class="m-0 p-0">
+                            <button type="submit" name="action" value="toggle" class="btn m-0 p-0">
+                                {% if task.completed %}
+                                <i class="fa fa-check-square-o text-primary" title="Mark as todo"></i>
+                                {% else %}
+                                <i class="fa fa-square-o text-primary" title="Mark as complete"></i>
+                                {% endif %}
+                            </button>
+                        </h2>
+                    </div>
+
+                    <!-- Task Text -->
+                    <div class="col px-1 m-1 d-flex align-items-center">
+                        {% if request.args.get('edit')|int == task.id %}
+                        <input name="new_task" type="text" class="form-control form-control-lg border-0 rounded px-3"
+                            value="{{ task.task }}" />
+                        <button type="submit" name="action" value="edit"
+                            class="btn btn-success btn-sm ml-2">Save</button>
+                        {% else %}
+                        <input type="text" class="form-control form-control-lg border-0 bg-transparent rounded px-3"
+                            readonly value="{{ task.task }}" title="{{ task.task }}" />
+                        {% endif %}
+                    </div>
+
+                    <!-- Due Date -->
+                    <div class="col-auto m-1 p-0 px-3 {% if not task.due_at %}d-none{% endif %}">
+                        <div class="row">
+                            <div class="col-auto d-flex align-items-center rounded bg-white border border-warning">
+                                <i class="fa fa-hourglass-2 my-2 px-2 text-warning btn" title="Due on"></i>
+                                <h6 class="text my-2 pr-2">{{ task.due_at }}</h6>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="col-auto m-1 p-0 todo-actions">
+                        <div class="row d-flex align-items-center justify-content-end">
+                            {% if request.args.get('edit')|int != task.id %}
+                            <h5 class="m-0 p-0 px-2">
+                                <a href="{{ url_for('home', edit=task.id) }}" class="btn text-info p-0" title="Edit">
+                                    <i class="fa fa-pencil"></i>
+                                </a>
+                            </h5>
+                            {% endif %}
+                            <h5 class="m-0 p-0 px-2">
+                                <button type="submit" name="action" value="delete" class="btn text-danger p-0"
+                                    title="Delete">
+                                    <i class="fa fa-trash-o"></i>
+                                </button>
+                            </h5>
+                        </div>
+                        <div class="row todo-created-info">
+                            <div class="col-auto d-flex align-items-center pr-2">
+                                <i class="fa fa-info-circle my-2 px-2 text-black-50 btn" title="Created date"></i>
+                                <label class="date-label my-2 text-black-50">
+                                    {{ task.created_at.strftime('%d %b %Y') if task.created_at }}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                {% else %}
+                <p class="text-center text-muted">No tasks found.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    {{ bootstrap.load_js() }}
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
